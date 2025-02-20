@@ -16,7 +16,7 @@ def main():
 
     )
     message = prompt_initialize(task)
-    llm = GoogleAIModel(api_key="AIzaSyDL7NFfqMkn4sTfkofz58UHr3YOrSJPh88")
+    llm = GoogleAIModel(api_key="A")
     output = llm.chat(message)
     print(output)
 
