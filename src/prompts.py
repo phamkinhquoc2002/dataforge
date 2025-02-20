@@ -15,6 +15,7 @@ You must strictly follow the below format for this task:
 Notes:
 - Both "prompt" and "completion" fields must be non-empty.
 - Each sample must be a JSON dictionary with two keys: "prompt" and "completion".
+- You MUST ONLY return the output text with the above format and nothing else.
 """
 
 DPO = """
@@ -31,6 +32,7 @@ You must strictly follow the below format for this task:
 Notes:
 - Both "prompt", "chosen" and "rejected" fields must be non-empty.
 - Each sample must be a JSON dictionary with two keys: "prompt" and "completion".
+- You MUST ONLY return the output text with the above format and nothing else.
 """
 
 CONVERSATION = """
@@ -55,4 +57,5 @@ You must strictly follow the below format for this task:
 Notes:
 - Both "role" and "content" fields must be non-empty.
 - Each sample must be a JSON dictionary with a single key: "dialogue".
+- You MUST ONLY return the output text with the above format and nothing else.
 """

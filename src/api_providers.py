@@ -1,10 +1,10 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Union, List
-from datacls import Message
+from typing import Any, Union, List, Dict
 from openai import OpenAI
 from google.genai import types
 from google import genai
+from message import Message
 
 class BaseLLM(ABC):
 
@@ -102,10 +102,9 @@ class GoogleAIModel(BaseLLM):
             top_p: int = 0.5
     ):
         if not api_key:
-            self.client = genai.Client()
-        else:
-            self.client = genai.Client(api_key=api_key)
+            api_key = os.getenv("GENAI_API_KEY")
 
+        self.client = genai.Client(api_key=api_key)
         self.model = model
         self.api_key = api_key
         self.max_tokens = max_tokens
@@ -149,10 +148,8 @@ class GoogleAIModel(BaseLLM):
             for message in messages:
                 if message["role"] == "system":
                     system_instruction = message["content"]
-                elif message["role"] == "user":
+                if message["role"] == "user":
                     chat_content.append(message["content"])
-                if not chat_content:
-                    raise ValueError("No user messages provided.")
             if system_instruction:
                 self._config = types.GenerateContentConfig(
                     system_instruction=system_instruction,
