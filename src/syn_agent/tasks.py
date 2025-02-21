@@ -2,6 +2,9 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Literal
 
 class Task(BaseModel):
+    """
+    Task that user wants agent to perform.
+    """
     task_name: Literal['sft', 'dpo', 'multi-dialogue']
     grounded_knowledge: str | None = None
     task_description: str | None  = Field(default=None, max_length=200)

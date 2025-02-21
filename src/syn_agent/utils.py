@@ -1,8 +1,12 @@
 from prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
-from api_providers import Message
+from messages import Message
 from tasks import Task
+from typing import List
+import re
+import json
+import os
 
-def key_map(dictionary: dict, key, default=None):
+def key_map(dictionary: dict, key, default=None) -> str:
     """
     Retrieve the value from 'dictionary' for the given 'key'.
     
@@ -51,9 +55,51 @@ def prompt_initialize(
         A message containing the system prompt.
     """
     message = []
-    system_prompt= {"role": "system", "content": SYSTEM_PROMPT}
-    user_prompt = {"role": "user", "content": user_prompt_initialize(task)}
+    system_prompt= {"role": "system", 
+                    "content": SYSTEM_PROMPT}
+    user_prompt = {"role": "user", 
+                   "content": user_prompt_initialize(task)}
     message.append(system_prompt)
     message.append(user_prompt)
     return message
+    
+def extract_valid_output(output: str) -> List[dict]:
+    """
+    Extract the valid output from the response.
+    
+    Parameters:
+        output (str): The response from the synthetic data generator.
+        
+    Returns:
+        The valid output.
+    """
+    try:
+        pattern = re.compile(r"\[.*?\]", re.DOTALL)
+        match = pattern.search(output)
+        match_str = match.group()
+        parsed = json.loads(match_str)
+        if isinstance(parsed, list):
+            return parsed
+    except Exception as e:
+        error = "The format is invalid to extract. You must return the exact format as specified in the prompt"
+        return error
+    
+def save_to_file(output: List[dict], filename: str) -> None:
+    """
+    Save the output to a file.
+    
+    Parameters:
+        output (List[dict]): The output to save.
+        filename (str): The name of the file to save to.
+    """
+    try:
+        with open(filename, 'r') as f:
+            existing_data = json.load(f)
+    except FileNotFoundError:
+        existing_data = []
+    existing_data.extend(output)
+    with open(filename, 'w') as f:
+        json.dump(existing_data, f)
+        
+        
     

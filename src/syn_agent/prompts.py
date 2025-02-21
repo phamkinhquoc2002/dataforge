@@ -13,7 +13,7 @@ You must strictly follow the below format for this task:
 ]
 
 Notes:
-- Both "prompt" and "completion" fields must be non-empty.
+- Both "prompt" and "completion" fields must be non-empty. Answer must be in high quality and long enough.
 - Each sample must be a JSON dictionary with two keys: "prompt" and "completion".
 - You MUST ONLY return the output text with the above format and nothing else.
 """
@@ -30,7 +30,7 @@ You must strictly follow the below format for this task:
 ]
 
 Notes:
-- Both "prompt", "chosen" and "rejected" fields must be non-empty.
+- Both "prompt", "chosen" and "rejected" fields must be non-empty. "Chosen" answer must be in high quality and long enough.
 - Each sample must be a JSON dictionary with two keys: "prompt" and "completion".
 - You MUST ONLY return the output text with the above format and nothing else.
 """
@@ -38,24 +38,24 @@ Notes:
 CONVERSATION = """
 You must strictly follow the below format for this task:
 [
-  {
-    "dialogue": [
-      {
-        "role": "user",
-        "content": "User message"
-      },
-      {
-        "role": "system",
-        "content": "System response"
-      },
-      ...
-    ]
-  },
+  [
+    {
+      "role": "user",
+      "content": "User message"
+    },
+      
+    {
+      "role": "system",
+      "content": "System response"
+    },
+    ...
+  ]
+,
   ...
 ]
 
 Notes:
-- Both "role" and "content" fields must be non-empty.
+- Both "role" and "content" fields must be non-empty. System response must be in high quality and long enough.
 - Each sample must be a JSON dictionary with a single key: "dialogue".
 - You MUST ONLY return the output text with the above format and nothing else.
 """
