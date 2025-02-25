@@ -1,6 +1,6 @@
-from prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
-from messages import Message
-from tasks import Task
+from src.prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
+from src.messages import Message
+from src.tasks import Task
 from typing import List
 import re
 import json

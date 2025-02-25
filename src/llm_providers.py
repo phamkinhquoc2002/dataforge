@@ -4,7 +4,7 @@ from typing import Any, Union, List
 from openai import OpenAI
 from google.genai import types
 from google import genai
-from messages import Message
+from src.messages import Message
 
 class BaseLLM(ABC):
 

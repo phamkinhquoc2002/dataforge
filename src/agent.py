@@ -3,8 +3,8 @@ from langgraph.types import interrupt
 from abc import ABC, abstractmethod
 
 from messages import Message
-from tasks import Task
-from llm_providers import BaseLLM
+from src.tasks import Task
+from src.llm_providers import BaseLLM
 from typing import Union, Any, List
 
 class Agent(ABC):
