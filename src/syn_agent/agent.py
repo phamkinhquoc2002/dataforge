@@ -15,5 +15,5 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def __log__(self) -> None: 
+    def log(self) -> None: 
         pass

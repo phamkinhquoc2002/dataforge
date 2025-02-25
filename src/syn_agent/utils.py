@@ -47,21 +47,21 @@ def user_prompt_initialize(task: Task) -> str:
    
 def prompt_initialize(
         task: Task
-) -> Message:
+) -> List[Message]:
     """
     Initialize a conversation with the synthetic data generator.
     
     Returns:
         A message containing the system prompt.
     """
-    message = []
+    messages = []
     system_prompt= {"role": "system", 
                     "content": SYSTEM_PROMPT}
     user_prompt = {"role": "user", 
                    "content": user_prompt_initialize(task)}
-    message.append(system_prompt)
-    message.append(user_prompt)
-    return message
+    messages.append(system_prompt)
+    messages.append(user_prompt)
+    return messages
     
 def extract_valid_output(output: str) -> List[dict]:
     """
@@ -100,6 +100,3 @@ def save_to_file(output: List[dict], filename: str) -> None:
     existing_data.extend(output)
     with open(filename, 'w') as f:
         json.dump(existing_data, f)
-        
-        
-    
