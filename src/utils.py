@@ -1,10 +1,17 @@
-from src.prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
-from src.messages import Message
-from src.tasks import Task
+from prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
+from messages import Message
+from tasks import Task
 from typing import List
+from pypdf import PdfReader
 import re
 import json
 import os
+import logging
+from langchain.schema import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('__name__')
 
 def key_map(dictionary: dict, key, default=None) -> str:
     """
@@ -80,10 +87,10 @@ def extract_valid_output(output: str) -> List[dict]:
         parsed = json.loads(match_str)
         if isinstance(parsed, list):
             return parsed
-    except Exception as e:
+    except:
         error = "The format is invalid to extract. You must return the exact format as specified in the prompt"
-        return error
-    
+        logger.error(error)   
+
 def save_to_file(output: List[dict], filename: str) -> None:
     """
     Save the output to a file.
@@ -100,3 +107,53 @@ def save_to_file(output: List[dict], filename: str) -> None:
     existing_data.extend(output)
     with open(filename, 'w') as f:
         json.dump(existing_data, f)
+
+def chunk_parser(func):
+    """
+    Decorator to split PDF content into smaller, manageable chunks.
+    """
+    def wrapper(*args, **kwargs):
+        logger.info(f"Calling {func.__name__}")
+        docs = func(*args, **kwargs)
+        documents = [Document(page_content=doc) for doc in docs]
+        logger.info(f"Loading {len(documents)} pieces of context!")
+        
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=4096,
+            chunk_overlap=20
+        )
+        splitted_texts = text_splitter.split_documents(documents)
+        
+        if splitted_texts:
+            preview = splitted_texts[0].page_content[:100]
+            logger.info(f"Split successful. First chunk preview: {preview}...")
+        return splitted_texts
+    return wrapper
+
+@chunk_parser
+def pdf_parser(path: str):
+    """
+    Parse PDF file and extract text content.
+    
+    Parameters:
+        path (str): Path to the PDF file.
+        
+    Returns:
+        list: List of extracted text from PDF pages.
+    """
+    documents = []
+    if os.path.exists(path):
+        try:
+            pdf = PdfReader(path)
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                documents.append(page_text)
+            if documents:
+                logger.info(f"Extracted {len(documents)} pages. First page preview: {documents[0][:100]}")
+            else:
+                logger.warning("PDF file contains no extractable text")
+        except Exception as e:
+            logger.error(f"Error parsing PDF: {str(e)}")
+    else:
+        logger.error(f"PDF file not found at path: {path}")
+    return documents

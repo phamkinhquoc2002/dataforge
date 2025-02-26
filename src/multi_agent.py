@@ -1,17 +1,17 @@
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.store.memory import InMemoryStore
+from langchain.schema import Document
+from langchain.retrievers import BM25Retriever
 from langgraph.graph import StateGraph, START
 from langgraph.types import interrupt, Command
 from pydantic import BaseModel, Field,field_validator
 from typing import Literal, List, Union, Any, Optional
 from typing_extensions import TypedDict
-from src.llm_providers import BaseLLM
-from src.tasks import Task
-from src.utils import prompt_initialize
-from src.agent import Agent
-import logging
+from llm_providers import BaseLLM
+from tasks import Task
+from utils import prompt_initialize, extract_valid_output, save_to_file
+from agent import Agent
 from datetime import datetime
-from src.messages import Message
+import logging
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,24 +35,34 @@ class CurrentState(TypedDict):
     task: Task
     human_feedback: Optional[Feedback] = Field(None, description="human-in-the-loop feedback")
     response: Optional[str] = Field(None, description="response from the synthetic data generator")
+    retrieved_documents: Optional[List[Document]] = Field(None, description="retrieved documents from the retriever")
 
 class SyntheticDataGenerator(Agent):
     """
-    Synthetic data generator agent.
+    Synthetic Data Generation Agentic System.
+
     """
     def __init__(self, 
                  llm: Union[BaseLLM, List[BaseLLM]],
+                 retriever: BM25Retriever,
+                 output_path: str,
                  buffer_size: int = 10):
         self.llm = llm
         self.checkpointer = MemorySaver()
-        self.long_term_memory = InMemoryStore()
+        self.response_memory = []
         self.conversations: List[dict] = []
         self.logger = logging.getLogger(__name__)
         self.conversations: List[dict] = []
+        self.output_path = output_path
+        self.buffer_size = buffer_size
+        self.retriever = retriever
+        self.retrieved_index = 0
+
         graph = StateGraph(CurrentState)
+        graph.add_node('retrieve', self.retrieve)
         graph.add_node('generate', self.generate)
         graph.add_node('feedback_loop', self.human_in_the_loop)
-        graph.add_edge(START, 'generate')
+        graph.add_edge(START, 'retrieve')
         self.agent_flow = graph.compile(checkpointer=self.checkpointer)
     
     def get_len(self) -> int:
@@ -63,32 +73,41 @@ class SyntheticDataGenerator(Agent):
         """
         Generate synthetic data based on the current state of the dialogue.
         """
-        task = currentstate['task']
         turns = self.get_len()
-        if turns >0:
+        self.log(mode='info', log_content=f"Total number of conversation turns up to this point: {turns}")
+        task = currentstate['task']
+
+        if not currentstate.get('retrieved_documents') or len(currentstate['retrieved_documents']) <= self.retrieved_index:
+            return Command(goto='retrieve')
+        
+        task.grounded_knowledge = currentstate['retrieved_documents'][self.retrieved_index]
+        if turns > 0:
             prompt = self.conversations
         else:
             prompt = prompt_initialize(task)
+            self.log(mode='info', log_content=f"Prompt:{prompt}")
             self.conversations.extend(prompt)
-            self.log(mode='info', log_content=f"""Added to conversation memory: {prompt}""")
+            self.log(mode='info', log_content=f"Added to conversation memory: {prompt}")
         try:
             response = self.llm(prompt)
-            self.conversations.append(
-                {"role": "assistant", "content": response}
-            )
-            self.log('info', "Saved the first conversation to short-term-memory")
+            self.conversations.append({"role": "assistant", "content": response})
+            self.log('info', f"Added to conversation memory: {response}")
         except Exception as e:
             error = f"Error generating synthetic data: {e}"
-            self.logger.error(error)
+            self.log('error', f"Error generating synthetic data: {e}")
             return Command(goto='__end__', update={'error': error})
-        if currentstate['human_feedback']:
+        
+        if currentstate.get('human_feedback'):
             approval = currentstate['human_feedback'].approval
             if approval == 'yes':
-                return Command(goto='__end__', update={'response': response})
+                parsed_responses = extract_valid_output(response)
+                self.response_memory.extend(parsed_responses)
+                self.retrieved_index +=1
+                return Command(goto='retrieve')
             elif approval == 'no':
                 return Command(goto='feedback_loop', update={'response': response})
-        elif currentstate['human_feedback'] is None:
-            return Command(goto='feedback_loop', update={'response': response})
+            
+        return Command(goto='feedback_loop', update={'response': response})
     
     def human_in_the_loop(self, currentstate: CurrentState) -> Command:
         """
@@ -105,10 +124,17 @@ class SyntheticDataGenerator(Agent):
         self.conversations.append(
             {"role": "user", "content": feedback}
         )
-        feedback_log = f"Human in the loop Feedback: {feedback}"
-        self.log(mode='info', log_content=feedback_log)
+        self.log(mode='info', log_content=f"Human in the loop Feedback: {feedback}")
         return Command(goto='generate', update={'human_feedback': human_feedback})
-
+    
+    def retrieve(self, currentstate: CurrentState) -> Command:
+        """
+        Retrieve necessary context to generate data pairs!
+        """
+        localized_context = currentstate['task'].localization
+        retrieved_documents = self.retriever.invoke(localized_context)
+        return Command(goto='generate', update={'retrieved_documents': retrieved_documents})
+    
     def log(self, mode: str, log_content: str) -> None:
         """Log messages with context."""
         if mode == 'info':
@@ -121,9 +147,11 @@ class SyntheticDataGenerator(Agent):
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with open(f'running_{date}.log', 'w') as f:
             f.write('\n'.join(self.conversations))
-    
-    def __call__(self) -> Any:
-        pass
 
-    def save_files(self) -> Any:
+    def save(self) -> None:
+        """Saved to directory."""
+        if len(self.response_memory) == self.buffer_size:
+            save_to_file(self.response_memory, filename=self.output_path)
+
+    def __call__(self) -> Any:
         pass
