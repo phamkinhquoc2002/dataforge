@@ -1,6 +1,8 @@
 from typing_extensions import TypedDict
 from typing import Literal
+from dataclasses import dataclass
 
+@dataclass
 class Message(TypedDict):
     role: Literal['user', 'system', 'assistant']
     content: str

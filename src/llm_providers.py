@@ -4,7 +4,34 @@ from typing import Any, Union, List
 from openai import OpenAI
 from google.genai import types
 from google import genai
-from messages import Message
+from src.memory import Message
+import logging
+import functools
+import time
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+def retry(max_retries: int = 3, delay: float = 1.0):
+    """
+    A simple retry decorator that retries a function call upon encountering an exception.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            attempts = 0
+            while True:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    attempts += 1
+                    logger.error(f"Error in {func.__name__}: {e}. Attempt {attempts} of {max_retries}")
+                    if attempts >= max_retries:
+                        logger.error(f"Max retries reached for {func.__name__}. Raising exception.")
+                        raise
+                    time.sleep(delay)
+        return wrapper
+    return decorator
 
 class BaseLLM(ABC):
 
@@ -50,6 +77,7 @@ class OpenAIModel(BaseLLM):
         self.max_tokens = max_tokens
         self.temperature = temperature
 
+    @retry(max_retries=3, delay=2)    
     def generate(
             self, 
             prompt: str
@@ -68,6 +96,7 @@ class OpenAIModel(BaseLLM):
         )
         return completion.choices[0].message
     
+    @retry(max_retries=3, delay=2)
     def chat(
             self, 
             messages: List[Message]
@@ -81,17 +110,18 @@ class OpenAIModel(BaseLLM):
         )
             return completion.choices[0].message
         except Exception as e:
-            print(f"Error while making request {e}")
+            raise ValueError("Input must be a string or a list of Message objects.")
     
     def __call__(self, 
                  input: Union[str, List[Message]]
     ) -> str: #Fix the output validation type once finished the validation!
         if isinstance(input, str):
-            output = self.generate(prompt=str)
+            return self.generate(prompt=str)
+        elif isinstance(input, List):
+            return self.chat(messages=input)
         else:
-            output = self.chat(messages=input)
-        return output
-
+            raise ValueError("Input must be a string or a list of Message objects.")
+            
 class GoogleAIModel(BaseLLM):
     def __init__(
             self, 
@@ -128,6 +158,7 @@ class GoogleAIModel(BaseLLM):
         """Set a new configuration."""
         self._config = new_config
 
+    @retry(max_retries=3, delay=2)
     def generate(self, 
                  prompt: str) -> str:
         try:
@@ -139,7 +170,8 @@ class GoogleAIModel(BaseLLM):
             return completion.text
         except Exception as e:
             print(f"Error while making request: {e}")
-    
+
+    @retry(max_retries=3, delay=2)        
     def chat(self,
              messages: List[Message]) -> str:
         try:
@@ -166,9 +198,8 @@ class GoogleAIModel(BaseLLM):
                 response = chat.send_message(user_message)
             return response.text if response else ""
         except Exception as e:
-            print(f"Error while making request: {e}")
-
-                    
+            raise ValueError("No response received from chat.")
+       
     def __call__(self, 
                  input: Union[str, List[Message]]) -> Message:
         if isinstance(input, str):
@@ -176,4 +207,4 @@ class GoogleAIModel(BaseLLM):
         elif isinstance(input, List):
             return self.chat(messages=input)
         else:
-            print(f"Input must be a string or list of Message")
+            raise ValueError("Input must be a string or a list of Message objects.")
