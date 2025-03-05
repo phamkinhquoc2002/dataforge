@@ -4,7 +4,7 @@ from typing import Any, Union, List
 from openai import OpenAI
 from google.genai import types
 from google import genai
-from src.memory import Message
+from messages import Message
 import logging
 import functools
 import time
@@ -34,13 +34,15 @@ def retry(max_retries: int = 3, delay: float = 1.0):
     return decorator
 
 class BaseLLM(ABC):
-
+    """
+    Base LLM class.
+    """
     @abstractmethod
     def generate(
         self, 
         prompt: str,
         *kwargs: Any
-    ) -> Any: #Fix the output validation type once finished the validation!
+    ) -> str: 
         pass
 
     @abstractmethod
@@ -48,7 +50,7 @@ class BaseLLM(ABC):
         self, 
         messages: List[Message],
         *kwargs: Any
-    ) -> Any: #Fix the output validation type once finished the validation!
+    ) -> str:
         pass
 
     @abstractmethod
@@ -56,11 +58,13 @@ class BaseLLM(ABC):
         self, 
         input: Union[str, List[Message]],
         *kwargs: Any
-    ) -> Any: #Fix the output validation type once finished the validation!
+    ) -> str: 
         pass
 
 class OpenAIModel(BaseLLM):
-
+    """
+    OpenAI API Wrapper.
+    """
     def __init__(
             self,
             model: str = "gpt-4o-2024-05-13",
@@ -81,7 +85,7 @@ class OpenAIModel(BaseLLM):
     def generate(
             self, 
             prompt: str
-    ) -> str: #Fix the output validation type once finished the validation!
+    ) -> str: 
             
         message = [
             {"role": "user", "content": [
@@ -100,7 +104,7 @@ class OpenAIModel(BaseLLM):
     def chat(
             self, 
             messages: List[Message]
-    ) -> str: #Fix the output validation type once finished the validation!
+    ) -> str: 
         try:
             completion = self.client.chat.completions.create(
             model = self.model,
@@ -114,7 +118,7 @@ class OpenAIModel(BaseLLM):
     
     def __call__(self, 
                  input: Union[str, List[Message]]
-    ) -> str: #Fix the output validation type once finished the validation!
+    ) -> str:
         if isinstance(input, str):
             return self.generate(prompt=str)
         elif isinstance(input, List):
@@ -123,6 +127,9 @@ class OpenAIModel(BaseLLM):
             raise ValueError("Input must be a string or a list of Message objects.")
             
 class GoogleAIModel(BaseLLM):
+    """
+    GoogleAI Wrapper
+    """
     def __init__(
             self, 
             model: str = "gemini-2.0-flash",
@@ -201,7 +208,7 @@ class GoogleAIModel(BaseLLM):
             raise ValueError("No response received from chat.")
        
     def __call__(self, 
-                 input: Union[str, List[Message]]) -> Message:
+                 input: Union[str, List[Message]]) -> str:
         if isinstance(input, str):
             return self.generate(prompt=str)
         elif isinstance(input, List):

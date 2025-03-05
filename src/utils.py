@@ -1,5 +1,5 @@
 from prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
-from messages import Message
+from src.messages import Message
 from tasks import Task
 from typing import List
 from pypdf import PdfReader
@@ -40,7 +40,7 @@ def user_prompt_initialize(task: Task) -> str:
     tasks = {'sft': SFT, 'dpo': DPO, 'multi-dialogue': CONVERSATION}
     task_format = key_map(tasks, task.task_name)
     grounded = task.grounded_knowledge
-    num_of_data = task.num_of_data
+    num_of_data = task.rows_per_batch
     if task.task_description:
         task_description = f"Additional Dataset Info: {task.task_description}"
     else:
@@ -50,8 +50,7 @@ def user_prompt_initialize(task: Task) -> str:
     else:
         language = ""
     return f"You are tasked to help me generate a dataset of {num_of_data} rows{language}, based entirely on the following context:\n{grounded}\n{task_format}\n{task_description}\n"
-    
-   
+       
 def prompt_initialize(
         task: Task
 ) -> List[Message]:
@@ -69,6 +68,27 @@ def prompt_initialize(
     messages.append(system_prompt)
     messages.append(user_prompt)
     return messages
+
+def prompt_validator(func):
+    """
+    Validate the prompt format for data generator pipeline.
+    """
+    def wrapper(*args, **kwargs):
+        logger.info(f"Calling {func.__name__}")
+        docs = func(*args, **kwargs)
+        assert docs[0]["role"] == "system", "Wrong message role"
+        assert docs[1]["role"] == "user", "Wrong message role"
+        logger.info(f"""System Prompt: {docs[0]['content'][:100]}\nUser Prompt: {docs[1]['content'][:100]}\n""")
+        return docs
+    return wrapper
+
+@prompt_validator
+def one_shot_prompt(user_prompt:Message, response: str) -> List[Message]:
+    """
+    Create a behavioral one-shot prompt to adapt the llm to user's preferred answer.
+    """
+    optimized_prompt = user_prompt[1]['content'] + f"""Example:\n{response}"""
+    return optimized_prompt
     
 def extract_valid_output(output: str) -> List[dict]:
     """

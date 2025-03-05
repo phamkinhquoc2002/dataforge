@@ -8,11 +8,12 @@ from typing import Literal, List, Union, Any, Optional
 from typing_extensions import TypedDict
 from llm_providers import BaseLLM
 from tasks import Task
-from utils import prompt_initialize, extract_valid_output, save_to_file
+from utils import prompt_initialize, one_shot_prompt, extract_valid_output, save_to_file
 from agent import Agent
 from datetime import datetime
 import logging
-from langgraph.store.memory import InMemoryStore
+import asyncio
+from messages import Message
 
 logging.basicConfig(level=logging.INFO)
 
@@ -23,7 +24,7 @@ class Feedback(BaseModel):
     approval: Literal['yes', 'no']
     feedback: Optional[str] = Field(None, max_length=300)
 
-    @field_validator('feedback')
+    @field_validator('feedback', mode='before')
     def check_feedback(cls, v: str):
         if len(v) > 300:
             raise ValueError('Your feedback should not exceed 300 characters')
@@ -33,8 +34,10 @@ class CurrentState(TypedDict):
     """
     Current state of the dialogue.
     """
-    task: Task
-    human_feedback: Optional[Union[Feedback, dict[str, str]]] = Field(
+    task: Task = Field(
+        description="synthetic data generation mission"
+    )
+    human_feedback: Optional[Feedback] = Field(
         default=None, description="human-in-the-loop feedback"
         )
     response: Optional[str] = Field(
@@ -46,10 +49,7 @@ class CurrentState(TypedDict):
     retrieved_documents: Optional[List[Document]] = Field(
         default=None, description="retrieved documents from the retriever"
         )
-    retrieved_index: Optional[int] = Field(
-        default=None, description="Index of the retrieved document"
-    )
-
+    
     def get_len(self) -> int:
         """Return the number of conversation entries."""
         return len(self.conversations)
@@ -94,7 +94,8 @@ class SyntheticDataGenerator(Agent):
         #Conversations and Prompt Handling
         turns = currentstate.get_len()
         self.log(mode='info', log_content=f"Total number of conversation turns up to this point: {turns}")    
-        task.grounded_knowledge = currentstate['retrieved_documents'][0]
+        if currentstate['retrieved_documents']:
+            task.grounded_knowledge = currentstate['retrieved_documents'][0]
         #Generate first batch of output
         if turns > 0:
             prompt = conversations
@@ -108,9 +109,8 @@ class SyntheticDataGenerator(Agent):
             conversations.append({"role": "assistant", "content": response})
             self.log('info', f"Added response to conversation memory: {response}")
         except Exception as e:
-            error = f"Error generating synthetic data: {e}"
             self.log('error', f"Error generating synthetic data: {e}")
-            return Command(goto='__end__', update={'error': error}) 
+            return Command(goto='__end__') 
         return Command(goto='feedback_loop', update={'response': response, 'conversations': conversations})
     
     def human_in_the_loop(self, currentstate: CurrentState) -> Command:
@@ -130,7 +130,7 @@ class SyntheticDataGenerator(Agent):
             {"role": "user", "content": feedback}
         )
         self.log(mode='info', log_content=f"Human in the loop Feedback: {feedback}")
-        return Command(goto='generate', update={'human_feedback': human_feedback, 'conversations':conversations})
+        return Command(goto='fish_for_feedback', update={'human_feedback': human_feedback, 'conversations':conversations})
     
     def retrieve(self, currentstate: CurrentState) -> Command:
         """
@@ -138,12 +138,38 @@ class SyntheticDataGenerator(Agent):
         """
         localized_context = currentstate['task'].localization
         retrieved_documents = self.retriever.invoke(localized_context)
-        return Command(goto='generate', update={'retrieved_documents': retrieved_documents, 'retrieved_index': 0})
+        return Command(goto='fish_for_feedback', update={'retrieved_documents': retrieved_documents})
     
-    def data_generate(self) -> Command:
+    async def data_generate(self, currentstate: CurrentState) -> Command:
         """
+        Start generating the dataset.
         """
-        pass
+        response = currentstate.get('response')
+        task = currentstate.get('task')
+        retrieved_context = currentstate.get('retrieved_documents')
+
+        num_tasks = min(task.batch_size, len(retrieved_context))
+        optimized_prompts = await asyncio.gather(*[self.task_generate(
+            task=task,
+            i=i,
+            response=response,
+            retrieved_context=retrieved_context
+        )  for i in range(num_tasks)])
+
+        for prompt in optimized_prompts:
+            self.log(mode='info', log_content=prompt)
+            output = self.llm(prompt)
+            self.response_memory.append(extract_valid_output(output))
+            if len(self.response_memory) == self.buffer_size:
+                self.save()
+        return Command(goto='__end__')
+    
+    def task_generate(self, task: Task, i: int, response:str, retrieved_context: List[Document]) -> List[Message]:
+        """Optimize every task and prompt!"""
+        task.grounded_knowledge = retrieved_context[i]
+        user_prompt = prompt_initialize(task)
+        optimized_prompt = one_shot_prompt(user_prompt, response)
+        return optimized_prompt
     
     def log(self, mode: str, log_content: str) -> None:
         """Log messages with context."""
@@ -160,8 +186,7 @@ class SyntheticDataGenerator(Agent):
 
     def save(self) -> None:
         """Saved to directory."""
-        if len(self.response_memory) == self.buffer_size:
-            save_to_file(self.response_memory, filename=self.output_path)
+        save_to_file(self.response_memory, filename=self.output_path)
 
     def __call__(self) -> Any:
         pass

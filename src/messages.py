@@ -4,5 +4,6 @@ from dataclasses import dataclass
 
 @dataclass
 class Message(TypedDict):
+    """Message class."""
     role: Literal['user', 'system', 'assistant']
     content: str
