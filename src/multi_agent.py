@@ -177,7 +177,7 @@ class SyntheticDataGenerator(Agent):
         if not raw_documents:
             log_message(
                 {
-                    "type": "ERRPR",
+                    "type": "ERROR",
                     "text": "No documents retrieved. Proceeding without context."
                 }
             )
@@ -208,11 +208,11 @@ class SyntheticDataGenerator(Agent):
                     "text": f"{prompt[1]['content'][:200]}"
                 }
             )
-            output = await self.llm(prompt)
+            output = self.llm(prompt)
             log_message(
                 {
                     "type":"OUTPUT_MESSAGE",
-                    "text": f"\n---------DATA_GENERATE---------\n\nSample output of batch {num}:{prompt[:200]}"
+                    "text": f"\n---------DATA_GENERATE---------\n\nSample output of batch {num}:{output[:200]}"
                 }
             )
             self.response_memory.append(extract_valid_output(output))

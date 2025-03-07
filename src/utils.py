@@ -119,13 +119,7 @@ def prompt_validator(func):
                 }
             )
             raise ValueError("The second message must have the role 'user'.")
-        
-        log_message(
-            {
-                "type": "INFO",
-                "text": f"""System Prompt: {docs[0]['content'][:100]}\nUser Prompt: {docs[1]['content'][:100]}\n"""
-            }
-        )
+
         return docs
     return wrapper
 
@@ -259,7 +253,7 @@ def chunk_parser(func):
             log_message(
                 {
                     "type": "INFO", 
-                    "text":f"Split successful. Last chunk preview:\n{preview}..."
+                    "text":f"Split successful. Last chunk preview:\n##############\n{preview}..."
                 }
             )
         return splitted_texts
@@ -287,7 +281,7 @@ def pdf_parser(path: str) -> List[Document]:
                 log_message(
                     {
                         "type":"INFO",
-                        "text": f"Extracted {len(documents)} pages. First page preview:\n{documents[0][:100]}..."
+                        "text": f"Extracted {len(documents)} pages. First page preview:\n##############\n{documents[0][:100]}..."
                     }
                 )
             else:
@@ -301,7 +295,7 @@ def pdf_parser(path: str) -> List[Document]:
             log_message(
                 {
                     "type": "ERROR", 
-                    "text":f"Error parsing PDF: {str(e)}"
+                    "text":f"Error parsing PDF:\n##############\n{str(e)}"
                 }
             )
             raise ValueError("Error parsing PDF file")
@@ -309,7 +303,7 @@ def pdf_parser(path: str) -> List[Document]:
         log_message(
             {
                 "type":"INFO",
-                "text": f"PDF file not found at path: {path}"
+                "text": f"PDF file not found at path:\n##############\n{path}"
             }
         )
     return documents
@@ -331,7 +325,7 @@ def document_format(retrieved_documents: List[Document]) -> List[str]:
     log_message(
         {
             "type":"OUTPUT_MESSAGE", 
-            "text": f"FORMATTED DOCUMENTS PREVIEW: {formatted_docs[0][:200]}"
+            "text": f"FORMATTED DOCUMENTS PREVIEW:\n##############\n{formatted_docs[0][:200]}"
         }
     )
     return formatted_docs
