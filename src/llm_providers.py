@@ -1,16 +1,14 @@
 import os
-from abc import ABC, abstractmethod
-from typing import Any, Union, List
-from openai import OpenAI
-from google.genai import types
-from google import genai
-from messages import Message
-import logging
 import functools
 import time
+from abc import ABC, abstractmethod
+from typing import Any, Union, List
+from google.genai import types
+from google import genai
+from openai import OpenAI
+from messages import Message
+from utils import log_message
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 def retry(max_retries: int = 3, delay: float = 1.0):
     """
@@ -25,9 +23,19 @@ def retry(max_retries: int = 3, delay: float = 1.0):
                     return func(*args, **kwargs)
                 except Exception as e:
                     attempts += 1
-                    logger.error(f"Error in {func.__name__}: {e}. Attempt {attempts} of {max_retries}")
+                    log_message(
+                        {
+                            "type":"ERROR",
+                            "text": f"Error in {func.__name__}: {e}. Attempt {attempts} of {max_retries}"
+                        }
+                    )
                     if attempts >= max_retries:
-                        logger.error(f"Max retries reached for {func.__name__}. Raising exception.")
+                        log_message(
+                            {
+                                "type":"ERROR",
+                                "text": f"Max retries reached for {func.__name__}. Raising exception."
+                            }
+                        )
                         raise
                     time.sleep(delay)
         return wrapper
@@ -176,7 +184,13 @@ class GoogleAIModel(BaseLLM):
         )
             return completion.text
         except Exception as e:
-            print(f"Error while making request: {e}")
+            log_message(
+                {
+                    "type":"ERROR",
+                    "text":"Error while making request"
+                }
+            )
+            raise
 
     @retry(max_retries=3, delay=2)        
     def chat(self,
@@ -204,7 +218,13 @@ class GoogleAIModel(BaseLLM):
             for user_message in chat_content:
                 response = chat.send_message(user_message)
             return response.text if response else ""
-        except Exception as e:
+        except Exception:
+            log_message(
+                {
+                    "type":"ERROR",
+                    "text":"Response Error"
+                }
+            )
             raise ValueError("No response received from chat.")
        
     def __call__(self, 
@@ -214,4 +234,10 @@ class GoogleAIModel(BaseLLM):
         elif isinstance(input, List):
             return self.chat(messages=input)
         else:
+            log_message(
+                {
+                    "type":"ERROR",
+                    "text":"Response Error"
+                }
+            )
             raise ValueError("Input must be a string or a list of Message objects.")

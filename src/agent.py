@@ -23,4 +23,3 @@ class MemoryAgent(Agent):
     
     def __log__(self):
         pass
-    

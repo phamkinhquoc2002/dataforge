@@ -13,10 +13,10 @@ class Task(BaseModel):
     batch_size: int = Field(default=20, description="total number of batches")
     language: Optional[str]
 
-    @field_validator('num_of_data', mode='before')
+    @field_validator('rows_per_batch', mode='before')
     def check_num_of_data(cls, v: int):
-        if v < 10 or v > 20:
-            raise ValueError('You can only generate between 3 and 10 data samples for each batch')
+        if v <= 10 or v >= 20:
+            raise ValueError('You can only generate between 10 and 20 data samples for each batch')
         return v
     
     @field_validator('task_description', 'localization',  mode='before')
