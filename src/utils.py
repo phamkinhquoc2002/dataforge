@@ -4,7 +4,7 @@ import os
 from prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
 from messages import Message, LogMessage
 from tasks import Task
-from typing import List, Literal
+from typing import List, Literal, Union
 from pypdf import PdfReader
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -25,7 +25,7 @@ def log_message(log: LogMessage) -> None:
     formatted_text = Text()
 
     formatted_text.append(log['text'], style="white")
-    if log["type"]== 'DEBUG':
+    if log["type"]== 'ERROR':
         border_style = 'red'
     elif log["type"] == 'OUTPUT_MESSAGE':
         border_style = 'green'
@@ -170,7 +170,7 @@ def one_shot_prompt(user_prompt:List[Message],
     )
     return user_prompt_copy
     
-def extract_valid_output(output: str) -> List[dict]:
+def extract_valid_output(output: str) -> Union[List[dict], dict]:
     """
     Extract the valid output from the response.
     
@@ -194,7 +194,7 @@ def extract_valid_output(output: str) -> List[dict]:
                 "text":"The format is invalid to extract. You must return the exact format as specified in the prompt"
             }
         )
-        raise ValueError("Failed to extract valid JSON output.")   
+        return None
 
 def save_to_file(output: List[dict], 
                  filename: str) -> None:

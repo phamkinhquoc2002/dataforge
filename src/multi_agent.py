@@ -1,18 +1,20 @@
-from langgraph.checkpoint.memory import MemorySaver
+import os
+import asyncio
+from datetime import datetime
+from typing_extensions import TypedDict
+from pydantic import BaseModel, Field,field_validator
+from typing import List, Union, Any, Optional
 from langchain.schema import Document
-from langchain.retrievers import BM25Retriever
 from langgraph.graph import StateGraph, START
 from langgraph.types import interrupt, Command
-from pydantic import BaseModel, Field,field_validator
-from typing import Literal, List, Union, Any, Optional
-from typing_extensions import TypedDict
-from llm_providers import BaseLLM
+from langgraph.checkpoint.memory import MemorySaver
+from langchain_community.retrievers import BM25Retriever
 from tasks import Task
-from utils import prompt_initialize, one_shot_prompt, extract_valid_output, save_to_file, log_message, document_format
 from agent import Agent
-from datetime import datetime
-import asyncio
 from messages import Message
+from llm_providers import BaseLLM
+from utils import prompt_initialize, one_shot_prompt, extract_valid_output, save_to_file, log_message, document_format
+
 
 class Feedback(BaseModel):
     """
@@ -22,6 +24,8 @@ class Feedback(BaseModel):
 
     @field_validator('feedback', mode='before')
     def check_feedback(cls, v: str):
+        if v is None:
+            return v
         if len(v) > 300:
             raise ValueError('Your feedback should not exceed 300 characters')
         return v
@@ -32,9 +36,6 @@ class CurrentState(TypedDict):
     """
     task: Task = Field(
         description="synthetic data generation mission"
-    )
-    approval: Optional[Literal["yes", "no"]] = Field(
-        default=None, description="approval of the first response"
     )
     human_feedback: Optional[Feedback] = Field(
         default=None, description="human-in-the-loop feedback"
@@ -66,6 +67,8 @@ class SyntheticDataGenerator(Agent):
         self.output_path = output_path
         self.buffer_size = buffer_size
         self.retriever = retriever
+
+        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
 
         graph = StateGraph(CurrentState)
         graph.add_node('retrieve', self.retrieve)
@@ -138,7 +141,7 @@ class SyntheticDataGenerator(Agent):
             value="Do you approve?"
         )
         if approval == "yes":
-            return Command(goto='data_generate',  update={'approval': approval})
+            return Command(goto='data_generate')
         elif approval == "no":
             log_message(
                 {
@@ -146,7 +149,7 @@ class SyntheticDataGenerator(Agent):
                     "text": "User disapproved the response. Proceeding with refinement."
                 }
             )
-            return Command(goto='feedback_loop',  update={'approval': approval})
+            return Command(goto='feedback_loop')
 
     def human_in_the_loop(self, currentstate: CurrentState) -> Command:
         """
@@ -215,8 +218,16 @@ class SyntheticDataGenerator(Agent):
                     "text": f"\n---------DATA_GENERATE---------\n\nSample output of batch {num}:{output[:200]}"
                 }
             )
-            self.response_memory.append(extract_valid_output(output))
+            processed_output = extract_valid_output(output)
+            if processed_output:
+                self.response_memory.append(extract_valid_output(output))
             if len(self.response_memory) == self.buffer_size:
+                log_message(
+                {
+                    "type":"INFO",
+                    "text": f"\n---------SAVING_FILE---------\n\nSaving the file to {self.output_path}"
+                }
+            )
                 self.save()
         return Command(goto='__end__')
     

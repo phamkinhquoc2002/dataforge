@@ -9,7 +9,6 @@ from openai import OpenAI
 from messages import Message
 from utils import log_message
 
-
 def retry(max_retries: int = 3, delay: float = 1.0):
     """
     A simple retry decorator that retries a function call upon encountering an exception.

@@ -59,7 +59,3 @@ Notes:
 - Each sample must be a JSON dictionary with a single key: "dialogue".
 - You MUST ONLY return the output text with the above format and nothing else.
 """
-
-MEMORY_PROMPT = """
-Updating the user preference and create new ones based on the following conversational traces:\n\n
-"""
