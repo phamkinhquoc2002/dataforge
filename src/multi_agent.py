@@ -15,7 +15,6 @@ from messages import Message
 from llm_providers import BaseLLM
 from utils import prompt_initialize, one_shot_prompt, extract_valid_output, save_to_file, log_message, document_format
 
-
 class Feedback(BaseModel):
     """
     Feedback model for the multi-dialogue task.
@@ -53,12 +52,14 @@ class CurrentState(TypedDict):
 class SyntheticDataGenerator(Agent):
     """
     Synthetic Data Generation Agentic System.
+
     """
     def __init__(self, 
                  llm: Union[BaseLLM, List[BaseLLM]],
                  retriever: BM25Retriever,
                  output_path: str,
-                 buffer_size: int = 10):
+                 buffer_size: int = 10,
+                 thread_id: dict = None):
         
         self.llm = llm
         self.checkpointer = MemorySaver()
@@ -67,6 +68,7 @@ class SyntheticDataGenerator(Agent):
         self.output_path = output_path
         self.buffer_size = buffer_size
         self.retriever = retriever
+        self.thread_id = thread_id
 
         os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
 
@@ -74,7 +76,6 @@ class SyntheticDataGenerator(Agent):
         graph.add_node('retrieve', self.retrieve)
         graph.add_node('fish_for_feedback', self.fish_for_feedback)
         graph.add_node('human_approval', self.approve)
-        graph.add_node('feedback_loop', self.human_in_the_loop)
         graph.add_node('data_generate', self.data_generate)
         graph.add_edge(START, 'retrieve')
         self.agent_flow = graph.compile(checkpointer=self.checkpointer)
@@ -94,25 +95,19 @@ class SyntheticDataGenerator(Agent):
         )   
 
         if currentstate['retrieved_documents']:
-            task.grounded_knowledge = currentstate['retrieved_documents'][0]
+            task.grounded_knowledge = currentstate.get('retrieved_documents')[0]
 
         if turns > 0:
             log_message(
                 {
                     "type": "INFO",
-                    "text": f"FEEDBACK CHECK: {conversations[-1]['content']}"
+                    "text": f"User Feedback: {conversations[-1]['content']}"
                 }
             )
             prompt = conversations
         else:
             prompt = prompt_initialize(mode="fish", task=task)
             conversations.extend(prompt)
-            log_message(
-                {
-                    "type": "OUTPUT_MESSAGE",
-                    "text": f"\n---------FISH_FOR_FEEDBACK---------\n\nSystem Prompt:{conversations[0]['content']}\nUser Prompt:{conversations[1]['content']}."
-                }
-            )
 
         try:
             response = self.llm(prompt)
@@ -120,56 +115,47 @@ class SyntheticDataGenerator(Agent):
             log_message(
                 {
                     "type": "OUTPUT_MESSAGE",
-                    "text": f"\n---------FISH_FOR_FEEDBACK---------\n\nResponse:{response}"
+                    "text": f"\n---------FISH_FOR_FEEDBACK: TURN {turns}---------\n\nResponse: {response}"
                 }
             )
         except Exception as e:
             log_message(
                 {
                     "type": "ERROR",
-                    "text": f"ERROR generating synthetic data: {e}"
+                    "text": f"Error while generating synthetic data: {e}"
                 }
             )
-            raise e
+            return Command(goto='__end__')
         return Command(goto='human_approval', update={'response': response, 'conversations': conversations})
     
     def approve(self, currentstate: CurrentState) -> Command:
         """
         Approve the first response.
         """
-        approval = interrupt(
-            value="Do you approve?"
+        conversations = currentstate.get('conversations')
+        feedback = interrupt(
+            value="Do You Approve This Response?\n**If you approve, respond with 'yes'. If you don't, respond with your feedback**"
         )
-        if approval == "yes":
+        if feedback == "yes":
             return Command(goto='data_generate')
-        elif approval == "no":
+        else:
             log_message(
                 {
                     "type":"INFO",
                     "text": "User disapproved the response. Proceeding with refinement."
                 }
             )
-            return Command(goto='feedback_loop')
-
-    def human_in_the_loop(self, currentstate: CurrentState) -> Command:
-        """
-        Human-in-the-loop feedback loop.
-        """
-        conversations = currentstate.get('conversations')
-        feedback = interrupt(
-            value=f"Any Feedback to improve the answer?\n"
-        )
-        human_feedback = Feedback(feedback=feedback)
-        conversations.append(
-            {"role": "user", "content": feedback}
-        )
-        log_message(
+            log_message(
             {
                 "type":"OUTPUT_MESSAGE",
-                "text": f"\n---------HUMAN_IN_THE_LOOP---------\n\nUser Feedback{feedback}"
+                "text": f"\n---------HUMAN_IN_THE_LOOP---------\n\nUser Feedback: {feedback}"
             }
-        )
-        return Command(goto='fish_for_feedback', update={'human_feedback': human_feedback.model_dump(), 'conversations':conversations})
+            )
+            human_feedback = Feedback(feedback=feedback)
+            conversations.append(
+            {"role": "user", "content": feedback}
+            )
+            return Command(goto='fish_for_feedback', update={'human_feedback': human_feedback.model_dump(), 'conversations': conversations})
     
     def retrieve(self, currentstate: CurrentState) -> Command:
         """
@@ -196,7 +182,7 @@ class SyntheticDataGenerator(Agent):
         task = currentstate.get('task')
         retrieved_context = currentstate.get('retrieved_documents')
 
-        num_tasks = min(task.batch_size, len(retrieved_context))
+        num_tasks = len(retrieved_context)
         optimized_prompts = await asyncio.gather(*[self.task_generate(
             task=task,
             i=i,
@@ -205,27 +191,28 @@ class SyntheticDataGenerator(Agent):
         )  for i in range(num_tasks)])
 
         for num, prompt in enumerate(optimized_prompts):
-            log_message(
-                {
-                    "type":"INFO",
-                    "text": f"{prompt[1]['content'][:200]}"
-                }
-            )
             output = self.llm(prompt)
             log_message(
                 {
                     "type":"OUTPUT_MESSAGE",
-                    "text": f"\n---------DATA_GENERATE---------\n\nSample output of batch {num}:{output[:200]}"
+                    "text": f"\n---------DATA_GENERATE---------\n\nSample output of batch {num}:{output[:200]}..."
                 }
             )
             processed_output = extract_valid_output(output)
             if processed_output:
-                self.response_memory.append(extract_valid_output(output))
-            if len(self.response_memory) == self.buffer_size:
+                self.response_memory.append(processed_output)
+            else:
+                log_message(
+                    {
+                        "type":"ERROR",
+                        "text": f"Some invalid output found in the response of batch {num}."
+                    }
+                )
+            if len(self.response_memory) > self.buffer_size:
                 log_message(
                 {
                     "type":"INFO",
-                    "text": f"\n---------SAVING_FILE---------\n\nSaving the file to {self.output_path}"
+                    "text": f"\n---------SAVING_FILE---------\n\nSaving the file to {self.output_path}..."
                 }
             )
                 self.save()
@@ -243,7 +230,7 @@ class SyntheticDataGenerator(Agent):
 
     def log(self) -> None:
         """Saved the conversations to a log file."""
-        date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         with open(f'running_{date}.log', 'w') as f:
             f.write('\n'.join(self.conversations))
 
@@ -251,5 +238,14 @@ class SyntheticDataGenerator(Agent):
         """Saved to directory."""
         save_to_file(self.response_memory, filename=self.output_path)
 
-    def __call__(self) -> Any:
+    async def call(self, task: Task) -> None:
+        """
+        Start the synthetic data generation process with human-in-the-loop.
+        
+        Args:
+            task (Task): The task containing the data generation requirements.
+            
+        Returns:
+            None
+        """
         pass

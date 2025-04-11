@@ -7,38 +7,7 @@ from google.genai import types
 from google import genai
 from openai import OpenAI
 from messages import Message
-from utils import log_message
-
-def retry(max_retries: int = 3, delay: float = 1.0):
-    """
-    A simple retry decorator that retries a function call upon encountering an exception.
-    """
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            attempts = 0
-            while True:
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    attempts += 1
-                    log_message(
-                        {
-                            "type":"ERROR",
-                            "text": f"Error in {func.__name__}: {e}. Attempt {attempts} of {max_retries}"
-                        }
-                    )
-                    if attempts >= max_retries:
-                        log_message(
-                            {
-                                "type":"ERROR",
-                                "text": f"Max retries reached for {func.__name__}. Raising exception."
-                            }
-                        )
-                        raise
-                    time.sleep(delay)
-        return wrapper
-    return decorator
+from utils import log_message, retry
 
 class BaseLLM(ABC):
     """

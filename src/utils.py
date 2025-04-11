@@ -1,11 +1,14 @@
 import re
 import json
 import os
+import functools
+import time
 from prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
 from messages import Message, LogMessage
 from tasks import Task
 from typing import List, Literal, Union
-from pypdf import PdfReader
+from langchain_docling import DoclingLoader
+from docling.chunking import HybridChunker
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from rich.console import Console
@@ -191,7 +194,7 @@ def extract_valid_output(output: str) -> Union[List[dict], dict]:
         log_message(
             {
                 "type":"ERROR",
-                "text":"The format is invalid to extract. You must return the exact format as specified in the prompt"
+                "text": f"The format is invalid to extract {e}. You must return the exact format as specified in the prompt"
             }
         )
         return None
@@ -221,81 +224,32 @@ def save_to_file(output: List[dict],
     with open(filename, 'w') as f:
         json.dump(existing_data, f)
 
-def chunk_parser(func):
-    """
-    Decorator to split PDF content into smaller, manageable chunks.
-    """
-    def wrapper(*args, **kwargs):
-        log_message(
-            {
-            "type" : "INFO", 
-            "text": f"Calling {func.__name__}"
-            }
-        )
-
-        docs = func(*args, **kwargs)
-        documents = [Document(page_content=doc) for doc in docs]
-        log_message(
-            {
-                "type":"INFO", 
-                "text":f"Loading {len(documents)} pieces of context!"
-            }
-        )
-
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=8000,
-            chunk_overlap=200
-        )
-        splitted_texts = text_splitter.split_documents(documents)
-        
-        if splitted_texts:
-            preview = splitted_texts[-1].page_content[:100]
-            log_message(
-                {
-                    "type": "INFO", 
-                    "text":f"Split successful. Last chunk preview:\n##############\n{preview}..."
-                }
-            )
-        return splitted_texts
-    return wrapper
-
-@chunk_parser
 def pdf_parser(path: str) -> List[Document]:
     """
     Parse PDF file and extract text content.
     
     Parameters:
         path (str): Path to the PDF file.
-        
     Returns:
-        list: List of extracted text from PDF pages.
+        List[Document]: List of Document objects containing extracted text from the PDF pages.
     """
-    documents = []
+    chunker = HybridChunker(max_tokens=4000)
+    loader = DoclingLoader(path, chunker=chunker)
+
     if os.path.exists(path):
         try:
-            pdf = PdfReader(path)
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                documents.append(page_text)
-            if documents:
-                log_message(
+            pdf = loader.load()
+            log_message(
                     {
                         "type":"INFO",
-                        "text": f"Extracted {len(documents)} pages. First page preview:\n##############\n{documents[0][:100]}..."
-                    }
-                )
-            else:
-                log_message(
-                    {
-                        "type":"INFO",
-                        "text":"PDF file contains no extractable text"
+                        "text": f"Extracted {len(pdf)} pages. First page preview:\n\n{pdf[0].page_content}..."
                     }
                 )
         except Exception as e:
             log_message(
                 {
                     "type": "ERROR", 
-                    "text":f"Error parsing PDF:\n##############\n{str(e)}"
+                    "text":f"Error parsing PDF:\n\n{str(e)}"
                 }
             )
             raise ValueError("Error parsing PDF file")
@@ -303,10 +257,10 @@ def pdf_parser(path: str) -> List[Document]:
         log_message(
             {
                 "type":"INFO",
-                "text": f"PDF file not found at path:\n##############\n{path}"
+                "text": f"PDF file not found at path:\n\n{path}"
             }
         )
-    return documents
+    return pdf
 
 def document_format(retrieved_documents: List[Document]) -> List[str]:
     """
@@ -329,3 +283,34 @@ def document_format(retrieved_documents: List[Document]) -> List[str]:
         }
     )
     return formatted_docs
+
+def retry(max_retries: int = 3, delay: float = 1.0):
+    """
+    A simple retry decorator that retries a function call upon encountering an exception.
+    """
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            attempts = 0
+            while True:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    attempts += 1
+                    log_message(
+                        {
+                            "type":"ERROR",
+                            "text": f"Error in {func.__name__}: {e}. Attempt {attempts} of {max_retries}"
+                        }
+                    )
+                    if attempts >= max_retries:
+                        log_message(
+                            {
+                                "type":"ERROR",
+                                "text": f"Max retries reached for {func.__name__}. Raising exception."
+                            }
+                        )
+                        raise
+                    time.sleep(delay)
+        return wrapper
+    return decorator
