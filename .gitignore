@@ -1,7 +1,7 @@
 .env
 src/output/
 src/cv.pdf
-src/test.ipynb
+test.ipynb
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

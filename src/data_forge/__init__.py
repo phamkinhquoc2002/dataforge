@@ -1,7 +1,7 @@
 """
-Synthetic Data Generation Agentic System.
+DataForge: Synthetic Data Generation Agentic System.
 
-A framework for generating synthetic data using Google AI models with human-in-the-loop feedback.
+A framework for generating synthetic data using LLM models with human-in-the-loop feedback.
 """
 
 from .agent import Agent

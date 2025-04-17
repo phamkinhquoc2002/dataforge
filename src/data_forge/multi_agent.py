@@ -9,11 +9,11 @@ from langgraph.graph import StateGraph, START
 from langgraph.types import interrupt, Command
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_community.retrievers import BM25Retriever
-from src.tasks import Task
-from src.agent import Agent
-from src.messages import Message
-from src.llm_providers import BaseLLM
-from src.utils import prompt_initialize, one_shot_prompt, extract_valid_output, save_to_file, log_message, document_format
+from .tasks import Task
+from .agent import Agent
+from .messages import Message
+from .llm_providers import BaseLLM
+from .utils import prompt_initialize, one_shot_prompt, extract_valid_output, save_to_file, log_message, document_format
 
 class Feedback(BaseModel):
     """
@@ -250,4 +250,26 @@ class SyntheticDataGenerator(Agent):
         Returns:
             None
         """
-        pass
+        try:
+            async for output in self.agent_flow.astream(
+                {
+                    "task": task,
+                    "human_feedback": None,
+                    "conversations": []
+                }, 
+                config=self.thread_id, stream_mode="updates"):
+                for key, value in output.items():
+                    if key == '__interrupt__':
+                        interrupt_obj = value[0]
+                        prompt_text = interrupt_obj.value
+                        feedback = await asyncio.to_thread(input, prompt_text)
+                        await self.agent_flow.ainvoke(
+                            Command(resume=feedback),
+                            config=self.thread_id)
+        except Exception as e:
+            log_message(
+                {
+                    "type": "ERROR",
+                    "text": f"[ERROR] Exception during data generation: {e}"
+                }
+            )

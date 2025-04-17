@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.llm_providers import BaseLLM
+from .llm_providers import BaseLLM
 from typing import Union, List
 
 class Agent(ABC):

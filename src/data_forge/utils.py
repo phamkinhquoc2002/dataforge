@@ -3,9 +3,9 @@ import json
 import os
 import functools
 import time
-from src.prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
-from src.messages import Message, LogMessage
-from src.tasks import Task
+from .prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
+from .messages import Message, LogMessage
+from .tasks import Task
 from typing import List, Literal
 from langchain_docling import DoclingLoader
 from docling.chunking import HybridChunker
