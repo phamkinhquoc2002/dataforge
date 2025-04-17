@@ -3,7 +3,7 @@
 
 A comprehensive toolkit for generating high-quality synthetic datasets tailored for AI researchers and data scientists. Featuring a robust PDF parser and intelligent knowledge localization capabilities, DataForge strengthens your data generation pipeline with custom knowledge integration—providing a better approach to traditional knowledge distillation techniques.
 
-# Features
+## Features
 * Multi-Agent Orchestration: Compose complex synthetic data pipelines with agentic collaboration.
 * LLM Powerhouse: Seamless integration with Google Gemini, OpenAI GPT, and more.
 * Human-in-the-Loop: Pause, review, and steer data generation interactively—no more black-box outputs!
