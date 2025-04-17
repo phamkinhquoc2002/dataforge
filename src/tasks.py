@@ -9,12 +9,12 @@ class Task(BaseModel):
     localization: Optional[str] = Field(default=None, max_length=200, description="localize the part where you want to extract knowledge!")
     grounded_knowledge: Optional[str] = Field(default=None, description="grounded context to generate data from!")
     task_description: Optional[str]  = Field(default=None, max_length=200, description="additional task description tailor to personal needs!")
-    rows_per_batch: int = Field(..., gt=5, lt=20, description="number of data rows generated per batch")
+    rows_per_batch: int = Field(..., gt=3, lt=20, description="number of data rows generated per batch")
     language: Optional[str]
 
     @field_validator('rows_per_batch', mode='before')
     def check_num_of_data(cls, v: int):
-        if v <= 5 or v >= 20:
+        if v <= 3 or v >= 20:
             raise ValueError('You can only generate between 10 and 20 data samples for each batch')
         return v
     

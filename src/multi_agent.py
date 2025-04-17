@@ -3,17 +3,17 @@ import asyncio
 from datetime import datetime
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field,field_validator
-from typing import List, Union, Any, Optional
+from typing import List, Union, Optional
 from langchain.schema import Document
 from langgraph.graph import StateGraph, START
 from langgraph.types import interrupt, Command
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_community.retrievers import BM25Retriever
-from tasks import Task
-from agent import Agent
-from messages import Message
-from llm_providers import BaseLLM
-from utils import prompt_initialize, one_shot_prompt, extract_valid_output, save_to_file, log_message, document_format
+from src.tasks import Task
+from src.agent import Agent
+from src.messages import Message
+from src.llm_providers import BaseLLM
+from src.utils import prompt_initialize, one_shot_prompt, extract_valid_output, save_to_file, log_message, document_format
 
 class Feedback(BaseModel):
     """
@@ -195,17 +195,17 @@ class SyntheticDataGenerator(Agent):
             log_message(
                 {
                     "type":"OUTPUT_MESSAGE",
-                    "text": f"\n---------DATA_GENERATE---------\n\nSample output of batch {num}:{output[:200]}..."
+                    "text": f"\n---------DATA_GENERATE---------\n\nSample output of batch {num}:{output}..."
                 }
             )
             processed_output = extract_valid_output(output)
             if processed_output:
-                self.response_memory.append(processed_output)
+                self.response_memory.extend(processed_output)
             else:
                 log_message(
                     {
                         "type":"ERROR",
-                        "text": f"Some invalid output found in the response of batch {num}."
+                        "text": f"Some invalid output found in the response of batch {num}. {processed_output}"
                     }
                 )
             if len(self.response_memory) > self.buffer_size:
@@ -236,7 +236,9 @@ class SyntheticDataGenerator(Agent):
 
     def save(self) -> None:
         """Saved to directory."""
-        save_to_file(self.response_memory, filename=self.output_path)
+        if not os.path.exists(self.output_path):
+            os.makedirs(self.output_path)
+        save_to_file(self.response_memory, filename=os.path.join(self.output_path, 'output.json'))
 
     async def call(self, task: Task) -> None:
         """

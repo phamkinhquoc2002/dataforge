@@ -6,8 +6,8 @@ from typing import Any, Union, List
 from google.genai import types
 from google import genai
 from openai import OpenAI
-from messages import Message
-from utils import log_message, retry
+from src.messages import Message
+from src.utils import log_message, retry
 
 class BaseLLM(ABC):
     """

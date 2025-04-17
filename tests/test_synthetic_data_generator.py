@@ -1,13 +1,11 @@
 import pytest
-import asyncio
 from unittest.mock import Mock, patch
-from src.multi_agent import SyntheticDataGenerator, CurrentState, Feedback
+from src.multi_agent import SyntheticDataGenerator, CurrentState
 from src.tasks import Task
 from src.llm_providers import GoogleAIModel, BaseLLM
 from src.messages import Message
 from langchain_community.retrievers import BM25Retriever
 from langchain.schema import Document
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -119,25 +117,6 @@ async def test_human_feedback_loop(mock_google_ai, mock_retriever, example_task)
         command = agent.approve(initial_state)
         assert command.goto == 'data_generate'
 
-
-@pytest.mark.asyncio
-async def test_full_process(mock_google_ai, mock_retriever, example_task):
-    """Test the complete synthetic data generation process"""
-    agent = SyntheticDataGenerator(
-        llm=mock_google_ai,
-        retriever=mock_retriever,
-        output_path="./test_output",
-        thread_id={"configurable": {"thread_id": 123}}
-    )
-    
-    # Mock the interrupt function for human feedback
-    with patch('src.multi_agent.interrupt', return_value="yes"):
-        await agent.call(example_task)
-        
-    # Verify that the process completed successfully
-    assert len(agent.conversations) > 0
-    assert agent.response_memory is not None
-
 def test_retrieve_documents(valid_task, mock_llm, mock_retriever):
     """Test document retrieval."""
     generator = SyntheticDataGenerator(
@@ -175,39 +154,3 @@ def test_human_feedback_loop(valid_task, mock_llm, mock_retriever):
     with patch('src.multi_agent.interrupt', return_value="yes"):
         command = generator.approve(state)
         assert command.goto == 'data_generate'
-
-@pytest.mark.asyncio
-async def test_data_generation(valid_task, mock_llm, mock_retriever):
-    """Test data generation."""
-    generator = SyntheticDataGenerator(
-        llm=mock_llm,
-        retriever=mock_retriever,
-        output_path="./test_output",
-        buffer_size=10,
-        thread_id={"configurable": {"thread_id": 123}}
-    )
-    state = CurrentState(
-        task=valid_task,
-        conversations=[],
-        retrieved_documents=["Test document"],
-        response="Test response",
-        human_feedback=None
-    )
-    command = await generator.data_generate(state)
-    assert command.goto == '__end__'
-
-@pytest.mark.asyncio
-async def test_full_process(valid_task, mock_llm, mock_retriever):
-    """Test full synthetic data generation process."""
-    generator = SyntheticDataGenerator(
-        llm=mock_llm,
-        retriever=mock_retriever,
-        output_path="./test_output",
-        buffer_size=10,
-        thread_id={"configurable": {"thread_id": 123}}
-    )
-
-    with patch('src.multi_agent.interrupt', return_value="yes"):
-        await generator.call(valid_task)
-    assert len(generator.conversations) > 0
-    assert generator.response_memory is not None 

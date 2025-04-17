@@ -3,14 +3,13 @@ import json
 import os
 import functools
 import time
-from prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
-from messages import Message, LogMessage
-from tasks import Task
-from typing import List, Literal, Union
+from src.prompts import SFT, DPO, CONVERSATION, SYSTEM_PROMPT
+from src.messages import Message, LogMessage
+from src.tasks import Task
+from typing import List, Literal
 from langchain_docling import DoclingLoader
 from docling.chunking import HybridChunker
 from langchain.schema import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -173,31 +172,47 @@ def one_shot_prompt(user_prompt:List[Message],
     )
     return user_prompt_copy
     
-def extract_valid_output(output: str) -> Union[List[dict], dict]:
+def extract_valid_output(output: str):
     """
-    Extract the valid output from the response.
-    
+    Extract the valid JSON output from a possibly messy response.
+
     Parameters:
         output (str): The response from the synthetic data generator.
-        
+
     Returns:
-        The valid output.
+        The valid parsed object (list or dict), or None if failed.
     """
     try:
-        pattern = re.compile(r"\[.*?\]", re.DOTALL)
-        match = pattern.search(output)
-        match_str = match.group()
-        parsed = json.loads(match_str)
-        if isinstance(parsed, list):
+        parsed = json.loads(output)
+        if isinstance(parsed, (list, dict)):
             return parsed
+    except json.JSONDecodeError:
+        pass  
+    try:
+        start = output.find('[')
+        end = output.rfind(']') + 1
+        if start != -1 and end != -1:
+            json_fragment = output[start:end]
+            parsed = json.loads(json_fragment)
+            if isinstance(parsed, (list, dict)):
+                return parsed
     except Exception as e:
-        log_message(
-            {
-                "type":"ERROR",
-                "text": f"The format is invalid to extract {e}. You must return the exact format as specified in the prompt"
-            }
-        )
-        return None
+        log_message({"type": "ERROR", "text": f"Manual extraction failed: {e}"})
+
+    try:
+        matches = re.findall(r'\[\s*(?:.|\n)*?\]', output)
+        for match in matches:
+            try:
+                parsed = json.loads(match)
+                if isinstance(parsed, (list, dict)):
+                    return parsed
+            except json.JSONDecodeError:
+                continue
+    except Exception as e:
+        log_message({"type": "ERROR", "text": f"Regex fallback failed: {e}"})
+
+    log_message({"type": "ERROR", "text": "Could not extract valid JSON output"})
+    return None
 
 def save_to_file(output: List[dict], 
                  filename: str) -> None:
@@ -279,7 +294,7 @@ def document_format(retrieved_documents: List[Document]) -> List[str]:
     log_message(
         {
             "type":"OUTPUT_MESSAGE", 
-            "text": f"FORMATTED DOCUMENTS PREVIEW:\n##############\n{formatted_docs[0][:200]}"
+            "text": f"FORMATTED DOCUMENTS PREVIEW:\n\n{formatted_docs[0][:200]}"
         }
     )
     return formatted_docs
