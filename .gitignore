@@ -1,5 +1,6 @@
 .env
-test_pdf/
+src/output/
+src/cv.pdf
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
