@@ -1,6 +1,7 @@
-# Data Forge
-⚡️ DataForge: The Ultimate Synthetic Data Generation Framework
-DataForge is your all-in-one, next-gen toolkit for creating high-quality synthetic datasets—built for AI researchers, data scientists.
+# ⚡️ Data Forge
+## The Ultimate Synthetic Data Generation Framework
+
+A comprehensive toolkit for generating high-quality synthetic datasets tailored for AI researchers and data scientists. Featuring a robust PDF parser and intelligent knowledge localization capabilities, DataForge strengthens your data generation pipeline with custom knowledge integration—providing a better approach to traditional knowledge distillation techniques.
 
 # Features
 * Multi-Agent Orchestration: Compose complex synthetic data pipelines with agentic collaboration.
