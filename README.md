@@ -13,3 +13,5 @@ A comprehensive toolkit for generating high-quality synthetic datasets tailored 
 * Human-in-the-Loop: Pause, review, and steer data generation interactively—no more black-box outputs!
 * Document-Aware Generation: Retrieve the necessary localized knowledge, chunk, and leverage it as context for synthetic data generation.
 * Auto-Save & Logging: All outputs and logs are organized, timestamped, and ready for audit.
+
+## Table of Contents
