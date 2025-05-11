@@ -1,4 +1,6 @@
 <div align="center"><img src="https://github.com/phamkinhquoc2002/dataforge/blob/main/data%20f0rge.png" alt="My Image" width="300"/></div>
+
+
 # ⚡️ Data Forge
 ## The Ultimate Synthetic Data Generation Framework
 
