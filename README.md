@@ -1,4 +1,4 @@
-<div align="center"><img src="https://github.com/phamkinhquoc2002/dataforge/blob/main/data%20f0rge.png" alt="My Image" width="600"/></div>
+<div align="center"><img src="https://github.com/phamkinhquoc2002/dataforge/blob/main/truelogo.png" alt="My Image" width="400"/></div>
 
 
 # ⚡️ Data Forge
