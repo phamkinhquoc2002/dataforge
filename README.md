@@ -15,5 +15,7 @@ A comprehensive toolkit for generating high-quality synthetic datasets tailored 
 * Auto-Save & Logging: All outputs and logs are organized, timestamped, and ready for audit.
 
 ## Installation
-
+"""
+pip install dataforge
+"""
 ## Basic Usage
