@@ -15,7 +15,7 @@ Synforge is a lightweight Python framework designed to generate high-quality syn
 * **Document-Aware Generation**: Automatically retrieve the necessary localized knowledge, chunk, and leverage it as context for synthetic data generation.
 ## 📦 Installation
 The most simple way to use dataforge is to install it through pip. It is recommended to use Python **3.11** or **3.12**.
-```
+```bash
 pip install synforge
 ```
 ## 🧪 Example
@@ -30,7 +30,7 @@ GEMINI_API_KEY="...."
 * `GEMINI_API_KEY`: Required to access the LLM for synthetic data generation. (Gemini in this case!)
 ### 🔧Sample Code
 1. LLM Engine initialization and parse context sources:
-```
+```python
 from synforge.utils import pdf_parser
 from synforge.llm_providers import GoogleAIModel
 
@@ -52,7 +52,7 @@ llm_engine = GoogleAIModel(
 pdf_content = pdf_parser("input.pdf")
 ```
 2. Define entities in the system: task (user-defined task), and agent (the multi-agentic system used for data generation), retriever (for context localization).
-```
+```python
 from src.data_forge.tasks import Task
 from langchain_community.retrievers import BM25Retriever
 from src.data_forge.multi_agent import SyntheticDataGenerator
