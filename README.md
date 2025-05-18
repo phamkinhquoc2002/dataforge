@@ -29,7 +29,7 @@ GEMINI_API_KEY="...."
 
 * `GEMINI_API_KEY`: Required to access the LLM for synthetic data generation. (Gemini in this case!)
 ### 🔧Sample Code
-1. LLM Engine initialization and parse context sources:
+**1. LLM Engine initialization and parse context sources:**
 ```python
 from synforge.utils import pdf_parser
 from synforge.llm_providers import GoogleAIModel
@@ -51,7 +51,7 @@ llm_engine = GoogleAIModel(
 # Parse knowledge from PDF
 pdf_content = pdf_parser("input.pdf")
 ```
-2. Define entities in the system: task (user-defined task), and agent (the multi-agentic system used for data generation), retriever (for context localization).
+**2. Define entities in the system: task (user-defined task), and agent (the multi-agentic system used for data generation), retriever (for context localization).**
 ```python
 from src.data_forge.tasks import Task
 from langchain_community.retrievers import BM25Retriever
