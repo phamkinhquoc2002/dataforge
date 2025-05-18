@@ -88,12 +88,13 @@ SynForge is still actively in development! We welcome contributors and collabora
  - More Task-specific prompt templates
 
 ## 📚 Citation
-@software{synforge,
+
+```@software{synforge,
   author = {Quoc Pham},
   title = {SynForge: The Ultimate Synthetic Data Generation Framework},
   url = {https://github.com/phamkinhquoc2002/dataforge},
   year = {2025}
-}
+}```
 
 
 
