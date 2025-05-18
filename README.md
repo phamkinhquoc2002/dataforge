@@ -85,7 +85,9 @@ SynForge is still actively in development! We welcome contributors and collabora
 * Planned features:
   
 ✅  Advanced retrieval techniques
+
 ✅  Enhanced agent customization
+
 ✅  More Task-specific prompt templates
 
 ## 📚 Citation
