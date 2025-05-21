@@ -82,7 +82,10 @@ agent = SyntheticDataGenerator(
 agent.call()
 ```
 **4. Start Generating data.**
-<div align="center"><img src="https://github.com/phamkinhquoc2002/synforge/blob/main/fish.png" alt="My Image" width="900"/></div>
+<div align="center"><img src="https://github.com/phamkinhquoc2002/synforge/blob/main/humanInTheLoop.png" alt="My Image" width="900"/></div>
+After calling the agent, you will first being asked by the model to provide some feedback for the first data row that it generates. If you approve with the style, hit "yes", if not, provide with a feedback for the model to improve the quality of the answer!
+<div align="center"><img src="https://github.com/phamkinhquoc2002/synforge/blob/main/feedback.png" alt="My Image" width="900"/></div>
+After receiving the feedback!
 ## 🚧 UPCOMING
 SynForge is still actively in development! We welcome contributors and collaborators to help us shape the future of synthetic data generation for AI engineers.
 
