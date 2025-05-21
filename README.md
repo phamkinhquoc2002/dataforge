@@ -81,7 +81,7 @@ agent = SyntheticDataGenerator(
 ```python
 agent.call()
 ```
-**4. Start Generating data.**
+**4. Human In the Loop.**
 <div align="center"><img src="https://github.com/phamkinhquoc2002/synforge/blob/main/humanInTheLoop.png" alt="My Image" width="900"/></div>
 
 After calling the agent, you will first being asked by the model to provide some feedback for the first data row that it generates. If you approve with the style, hit "yes", if not, provide with a feedback for the model to improve the quality of the answer!
