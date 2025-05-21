@@ -53,9 +53,9 @@ pdf_content = pdf_parser("input.pdf")
 ```
 **2. Define entities in the system: task (user-defined task), and agent (the multi-agentic system used for data generation), retriever (for context localization).**
 ```python
-from src.data_forge.tasks import Task
+from synforge.tasks import Task
 from langchain_community.retrievers import BM25Retriever
-from src.data_forge.multi_agent import SyntheticDataGenerator
+from synforge.multi_agent import SyntheticDataGenerator
 
 # Define retriever for knowledge localization
 retriever = BM25Retriever.from_documents(pdf_content)
