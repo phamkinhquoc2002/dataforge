@@ -4,7 +4,7 @@
 ## The Ultimate Synthetic Data Generation Framework
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python) ![License: MIT](https://img.shields.io/badge/License-MIT-green?logo=open-source-initiative)
 
-Synforge is a lightweight Python framework designed to generate high-quality synthetic datasets tailored to your specific tasks. With a powerful PDF parser and intelligent knowledge localization, DataForge enhances your data generation workflows by integrating custom domain knowledge—offering a smarter alternative to traditional knowledge distillation techniques. 
+Synforge is a Python framework designed to generate high-quality synthetic datasets tailored to your specific tasks. With a powerful PDF parser and intelligent knowledge localization, DataForge enhances your data generation workflows by integrating custom domain knowledge—offering a smarter alternative to traditional knowledge distillation techniques. 
 
 ## Features
 * **Multi-Agent Orchestration**: Compose complex synthetic data pipelines with agentic collaboration.
@@ -77,6 +77,12 @@ agent = SyntheticDataGenerator(
     thread_id={"configurable": {"thread_id": "1"}} # Used for Human-in-the-loop 
 )
 ```
+**3. Start Generating data.**
+```python
+agent.call()
+```
+**4. Start Generating data.**
+<div align="center"><img src="https://github.com/phamkinhquoc2002/synforge/blob/main/fish.png" alt="My Image" width="900"/></div>
 ## 🚧 UPCOMING
 SynForge is still actively in development! We welcome contributors and collaborators to help us shape the future of synthetic data generation for AI engineers.
 
