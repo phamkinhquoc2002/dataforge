@@ -1,4 +1,4 @@
-<div align="center"><img src="https://github.com/phamkinhquoc2002/dataforge/blob/main/assets/synforge" alt="My Image" width="900"/></div>
+<div align="center"><img src="https://github.com/phamkinhquoc2002/dataforge/blob/main/synforge" alt="My Image" width="900"/></div>
 
 # ⚡️ SynForge
 ## The Ultimate Synthetic Data Generation Framework
