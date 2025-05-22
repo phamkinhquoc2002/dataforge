@@ -82,11 +82,11 @@ agent = SyntheticDataGenerator(
 agent.call()
 ```
 **4. Human In the Loop.**
-<div align="center"><img src="https://github.com/phamkinhquoc2002/synforge/blob/main/assets/humanInTheLoop.png" alt="My Image" width=6900"/></div>
+<div align="center"><img src="https://github.com/phamkinhquoc2002/synforge/blob/main/assets/humanInTheLoop.png" alt="My Image" width=900"/></div>
 
 After calling the agent, you will first being asked by the model to provide some feedback for the first data row that it generates. If you approve with the style, hit "yes", if not, provide with a feedback for the model to improve the quality of the answer!
 
-<div align="center"><img src="https://github.com/phamkinhquoc2002/synforge/blob/main/assets/feedback.png" alt="My Image" width="600"/></div>
+<div align="center"><img src="https://github.com/phamkinhquoc2002/synforge/blob/main/assets/feedback.png" alt="My Image" width="900"/></div>
 
 After receiving the feedback!
 
